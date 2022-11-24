@@ -1,9 +1,18 @@
 <template>
-  <audio :src="`/musicStatic/${playing}`" v-if="playing" ref="player" @volumechange="volumechange"
-         @timeupdate="timeupdate" @loadeddata="loadeddata" @ended="ended" @play="afterPlay"></audio>
+  <audio :src="playing?`/MyMusic/${playing}`:''" ref="player"
+         @volumechange="volumechange"
+         @timeupdate="timeupdate"
+         @loadeddata="loadeddata"
+         @ended="ended"
+         @play="afterPlay"></audio>
   <div id="main">
     <div id="leftTab">
-      <MusicList :list="list" @playMusic="(music)=>play(music,true)" :playing="playing" ref="musicList" :mode="displayMode" @stop="stop"/>
+      <MusicList :list="list"
+                 @playMusic="(music)=>play(music,true)"
+                 :playing="playing"
+                 ref="musicList"
+                 :mode="displayMode"
+                 @stop="stop"/>
     </div>
     <div id="container" @wheel.passive="changeVolume">
       <div class="title">{{ playing || '未播放' }}</div>
@@ -15,11 +24,7 @@
         </div>
         <Lyric v-else-if="showcase==='lyric'" :lyricList="musicInfo.lyricList??[]" :timeStep="timeStep"/>
       </div>
-      <div class="progress">
-        <div class="info current">{{ getTime(current) }}</div>
-        <div class="info length">{{ getTime(length) }}</div>
-        <div class="enabled" :style="`width:${length?`${Math.ceil(current/length*10000)/100}%`:0}`"></div>
-      </div>
+      <Progress :current="current" :length="length" @setProgress="setProgress"/>
       <div class="buttons">
         <div class="button" @click="setDisplayMode">
           <img :src="iconMap[displayMode]" alt="" class="icon">
@@ -33,16 +38,18 @@
   </div>
 </template>
 <script setup>
-import {ref, watch} from "vue";
+import {nextTick, onMounted, ref, watch} from "vue";
+
 import MusicList from './components/list.vue'
 import VolumeDisplay from './components/volumeDisplay.vue'
 import Lyric from './components/lyric.vue'
-import recordPic from './assets/record.svg'
+import Progress from './components/progress.vue'
 
 import loopIcon from './assets/loop.svg'
 import randomIcon from './assets/random.svg'
 import singleLoopIcon from './assets/singleLoop.svg'
 import defaultIcon from './assets/default.svg'
+import recordPic from './assets/record.svg'
 
 import axios from 'axios'
 
@@ -56,19 +63,15 @@ axios.get('/getMusicList').then(r => {
 })
 const player = ref()
 let playingRequest = ''
-const play = (music,immediately) => {
-  if (music) {
-    playingRequest = music
-    if (immediately){
-      playerStatus.value = 'playing'
+const play = (music, immediately) => {
+  playingRequest = music
+  immediately && (playerStatus.value = 'playing')
+  axios.get(`/musicInfo/${music}`).then(({data}) => {
+    if (music === playingRequest) {
+      musicInfo.value = data
+      playing.value = music
     }
-    axios.get(`/musicInfo/${music}`).then(({data}) => {
-      if (music === playingRequest) {
-        musicInfo.value = data
-        playing.value = music
-      }
-    })
-  }
+  })
 }
 const afterPlay = () => {
   albumPicAnimationName.value = albumPicAnimationName.value === 'rotating' ? 'rotating2' : 'rotating'
@@ -80,15 +83,6 @@ const next = () => {
   musicList.value.next()
 }
 const playing = ref('')
-const getTime = (length) => {
-  const second = length % 60
-  const minute = Math.floor(length / 60)
-  if (minute > 0) {
-    return `${minute}m ${second}s`
-  } else {
-    return `${second}s`
-  }
-}
 const volumeDisplay = ref()
 const changeVolume = (e) => {
   if (playing.value) {
@@ -99,6 +93,11 @@ const changeVolume = (e) => {
     }
   }
 }
+onMounted(() => {
+  nextTick(()=>{
+    player.value.volume = +(localStorage.getItem('volume')/100 ?? 1)
+  })
+})
 const volumechange = () => {
   volumeDisplay.value.setVolume(Math.round(player.value.volume * 100))
 }
@@ -126,13 +125,16 @@ const timeupdate = () => {
 }
 const loadeddata = () => {
   length.value = Math.round(player.value.duration)
-  if (playerStatus.value === 'playing') {
+  if (playing.value&&playerStatus.value === 'playing') {
     player.value.play()
   }
 }
 const musicList = ref()
 const ended = () => {
   musicList.value.next()
+}
+const setProgress=(pre)=>{
+  player.value.currentTime=pre*player.value.duration
 }
 const displayMode = ref(+(localStorage.getItem('displayMode') ?? 0))
 const setDisplayMode = () => {
@@ -209,31 +211,6 @@ watch(playing, () => {
       font-weight bold
       margin-bottom 30px
 
-    .progress
-      width 60%
-      height 10px
-      border-radius 5px
-      background-color #333333
-      border 3px solid #AAAAAA
-      display flex
-      margin-top 60px
-      position relative
-
-      .info
-        position absolute
-        font-size 14px
-        font-weight bold
-        top -25px
-        color #AAAAAA
-
-      .length
-        right 10px
-
-      .current
-        left 10px
-
-      .enabled
-        background-color #888888
 
     .buttons
       margin 20px 0

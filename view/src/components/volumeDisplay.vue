@@ -10,7 +10,7 @@
 import {ref} from "vue";
 
 const visible = ref(false)
-const volume = ref(0)
+const volume = ref(100)
 const t=ref()
 const setVolume = (v) => {
   volume.value = v
@@ -19,6 +19,7 @@ const setVolume = (v) => {
   t.value=setTimeout(()=>{
     visible.value=false
   },1500)
+  localStorage.setItem('volume',v)
 }
 defineExpose({
   setVolume

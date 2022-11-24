@@ -8,7 +8,6 @@ export default defineConfig({
     host:true,
     port:8080,
     proxy:{
-      '/musicStatic':'http://127.0.0.1:88/',
       '/api':{
         target:'http://127.0.0.1:88/',
         rewrite:(path)=>path.replace('/api','')
