@@ -9,10 +9,11 @@
     >{{ lyric.lyric }}
     </div>
   </div>
+  <div class="lyricListMask"></div>
 </template>
 
 <script setup>
-import {computed, reactive, ref, watch} from "vue";
+import {computed, onMounted, reactive, ref, watch} from "vue";
 
 const props = defineProps(['lyricList', 'timeStep'])
 const lyricInsList=reactive([])
@@ -25,6 +26,9 @@ const find = () => {
     find()
   }
 }
+onMounted(()=>{
+  find()
+})
 watch(timeStep, () => {
   if (props.lyricList[step.value]){
     find()
@@ -57,8 +61,14 @@ watch(step,()=>{
     text-align center
 
   .lyric.light
-    color #DDDDDD
+    color #FFFFFF
 
   &::-webkit-scrollbar
     width 0
+.lyricListMask
+  position absolute
+  width 100%
+  height 100%
+  background-image linear-gradient(to bottom, rgba(85,85,85,1), rgba(85,85,85,0), rgba(85,85,85,1));
+  pointer-events none
 </style>

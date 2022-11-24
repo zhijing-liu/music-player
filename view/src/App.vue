@@ -3,12 +3,13 @@
          @timeupdate="timeupdate" @loadeddata="loadeddata" @ended="ended" @play="afterPlay"></audio>
   <div id="main">
     <div id="leftTab">
-      <MusicList :list="list" @playMusic="play" :playing="playing" ref="musicList" :mode="displayMode" @stop="stop"/>
+      <MusicList :list="list" @playMusic="(music)=>play(music,true)" :playing="playing" ref="musicList" :mode="displayMode" @stop="stop"/>
     </div>
     <div id="container" @wheel.passive="changeVolume">
       <div class="title">{{ playing || '未播放' }}</div>
       <div class="showcase" @click="showcase=showcase==='pic'?'lyric':'pic'">
-        <div v-if="showcase==='pic'" id="album" :class="albumPicAnimationName" :style="`animation-play-state:${playerStatus==='pause'?'paused':'running'};`">
+        <div v-if="showcase==='pic'" id="album" :class="albumPicAnimationName"
+             :style="`animation-play-state:${playerStatus==='pause'?'paused':'running'};`">
           <img id="albumPic" :src="musicInfo.albumPic??recordPic" alt="">
           <img id="albumBack" :src="musicInfo.albumPic??recordPic" alt="">
         </div>
@@ -20,7 +21,7 @@
         <div class="enabled" :style="`width:${length?`${Math.ceil(current/length*10000)/100}%`:0}`"></div>
       </div>
       <div class="buttons">
-        <div class="button" @click="displayMode=displayMode===3?0:displayMode+1">
+        <div class="button" @click="setDisplayMode">
           <img :src="iconMap[displayMode]" alt="" class="icon">
         </div>
         <div class="button" @click="last">上一首</div>
@@ -50,20 +51,24 @@ const iconMap = [defaultIcon, randomIcon, loopIcon, singleLoopIcon]
 const list = ref([])
 axios.get('/getMusicList').then(r => {
   list.value = r.data
+  const storagePlaying = localStorage.getItem('playing')
+  storagePlaying && list.value.includes(storagePlaying) && play(storagePlaying)
 })
 const player = ref()
-let playingStatic = ''
-const play = (music) => {
+let playingRequest = ''
+const play = (music,immediately) => {
   if (music) {
-    playingStatic = music
+    playingRequest = music
+    if (immediately){
+      playerStatus.value = 'playing'
+    }
     axios.get(`/musicInfo/${music}`).then(({data}) => {
-      if (music === playingStatic) {
+      if (music === playingRequest) {
         musicInfo.value = data
         playing.value = music
       }
     })
   }
-
 }
 const afterPlay = () => {
   albumPicAnimationName.value = albumPicAnimationName.value === 'rotating' ? 'rotating2' : 'rotating'
@@ -88,17 +93,9 @@ const volumeDisplay = ref()
 const changeVolume = (e) => {
   if (playing.value) {
     if (e.deltaY > 0) {
-      if (player.value.volume - 0.05 > 0) {
-        player.value.volume -= 0.05
-      } else {
-        player.value.volume = 0
-      }
+      player.value.volume = player.value.volume - 0.05 > 0 ? player.value.volume - 0.05 : 0
     } else {
-      if (player.value.volume + 0.05 < 1) {
-        player.value.volume += 0.05
-      } else {
-        player.value.volume = 1
-      }
+      player.value.volume = player.value.volume + 0.05 < 1 ? player.value.volume + 0.05 : 1
     }
   }
 }
@@ -128,15 +125,20 @@ const timeupdate = () => {
   timeStep.value = Math.round(player.value.currentTime * 1000)
 }
 const loadeddata = () => {
-  playerStatus.value = 'playing'
   length.value = Math.round(player.value.duration)
-  player.value.play()
+  if (playerStatus.value === 'playing') {
+    player.value.play()
+  }
 }
 const musicList = ref()
 const ended = () => {
   musicList.value.next()
 }
-const displayMode = ref(0)
+const displayMode = ref(+(localStorage.getItem('displayMode') ?? 0))
+const setDisplayMode = () => {
+  displayMode.value = displayMode.value === 3 ? 0 : displayMode.value + 1
+  localStorage.setItem('displayMode', displayMode.value.toString())
+}
 const albumPicAnimationName = ref('rotating')
 const musicInfo = ref({})
 const stop = () => {
@@ -147,6 +149,9 @@ const stop = () => {
   playing.value = ''
   playerStatus.value = 'pause'
 }
+watch(playing, () => {
+  localStorage.setItem('playing', playing.value)
+})
 </script>
 <style scoped lang="stylus">
 @-webkit-keyframes rotating {
@@ -258,6 +263,7 @@ const stop = () => {
       justify-content center
       align-items center
       padding 5vh 0
+      position relative
 
       #album
         width 45vh
@@ -266,6 +272,7 @@ const stop = () => {
         display flex
         justify-content center
         align-items center
+
         #albumBack
           position absolute
           top 0
@@ -277,6 +284,7 @@ const stop = () => {
           z-index 0
           filter blur(14px)
           border-radius 50%
+
         #albumPic
           width 30vh
           height 30vh
@@ -284,7 +292,7 @@ const stop = () => {
           border-radius 50%
           position absolute
           z-index 1
-          box-shadow 0 0 10px rgba(215,215,215,.1)
+          box-shadow 0 0 10px rgba(215, 215, 215, .1)
 
       #album.rotating
         animation rotating 120s linear infinite
