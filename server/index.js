@@ -1,5 +1,5 @@
 import express from 'express'
-import {readdirSync} from 'fs'
+import {readdirSync, readFileSync} from 'fs'
 import {join} from 'path'
 import {fileURLToPath} from 'url'
 import { parseFile } from 'music-metadata'
@@ -10,10 +10,13 @@ const path=join(fileURLToPath(import.meta.url),'../')
 const app = express()
 
 app.get('/getMusicList', (req, res) => {
-    res.send(readdirSync(join(path,'../view/public/MyMusic')))
+    res.send(readdirSync(join(path,'./MyMusic')))
+})
+app.get('/musicStatic/:musicName', (req, res) => {
+    res.send(readFileSync(join(path,'./MyMusic', req.params.musicName)))
 })
 app.get('/musicInfo/:musicName', async(req, res) => {
-    const fileInfo=await parseFile(join(path,'../view/public/MyMusic', req.params.musicName))
+    const fileInfo=await parseFile(join(path,'./MyMusic', req.params.musicName))
     const lyricList=[]
     if (fileInfo.common.lyrics){
         for (const lyrics of fileInfo.common.lyrics){

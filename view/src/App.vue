@@ -1,5 +1,5 @@
 <template>
-  <audio :src="playing?`/MyMusic/${playing}`:''" ref="player"
+  <audio :src="playing?`/musicStatic/${playing}`:''" ref="player"
          @volumechange="volumechange"
          @timeupdate="timeupdate"
          @loadeddata="loadeddata"
@@ -65,11 +65,14 @@ const player = ref()
 let playingRequest = ''
 const play = (music, immediately) => {
   playingRequest = music
-  immediately && (playerStatus.value = 'playing')
   axios.get(`/musicInfo/${music}`).then(({data}) => {
     if (music === playingRequest) {
       musicInfo.value = data
       playing.value = music
+      if (immediately){
+        playerStatus.value = 'playing'
+        player.value.load()
+      }
     }
   })
 }
@@ -134,7 +137,7 @@ const ended = () => {
   musicList.value.next()
 }
 const setProgress=(pre)=>{
-  player.value.currentTime=pre*player.value.duration
+  // player.value.currentTime=pre*player.value.duration
 }
 const displayMode = ref(+(localStorage.getItem('displayMode') ?? 0))
 const setDisplayMode = () => {
