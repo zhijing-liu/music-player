@@ -1,33 +1,49 @@
 <template>
   <div id="musicList" @scroll="scroll" ref="musicList">
     <div class="item" v-for="music in props.list" @click="()=>emits('playMusic',music)"
-         :class="{selected:playing===music}">{{ music }}
+         :key="music"
+         :class="{selected:props.playing===music}">{{ music }}
     </div>
   </div>
 </template>
 
 <script setup>
+import {computed} from "vue";
 
-const props = defineProps(['list', 'playing'])
-const emits = defineEmits(['playMusic'])
+const props = defineProps(['list', 'playing', 'mode'])
+const emits = defineEmits(['playMusic', 'stop'])
 const next = () => {
-  const index = props.list.indexOf(props.playing)
-  if (index < props.list.length - 1) {
-    emits('playMusic',props.list[index+1])
-  }else{
-    emits('playMusic',props.list[0])
+  const index = useList.value.indexOf(props.playing)
+  if (index < useList.value.length - 1) {
+    emits('playMusic', useList.value[index + 1])
+  } else if (props.mode !== 0) {
+    emits('playMusic', useList.value[0])
+  } else {
+    emits('stop')
   }
 }
+const modeMap = [
+  (list) => list,
+  (list) => [...list].sort(() => Math.random() - 0.5),
+  (list) => list,
+  () => [props.playing]
+]
+const useList = computed(() => {
+  return modeMap[props.mode ?? 0](props.list)
+})
 const last = () => {
-  const index = props.list.indexOf(props.playing)
-  if (index ===0) {
-    emits('playMusic',props.list[props.list.length-1])
-  }else{
-    emits('playMusic',props.list[index-1])
+  const index = useList.value.indexOf(props.playing)
+  if (index === 0) {
+    emits('playMusic', useList.value[useList.value.length - 1])
+  }
+  if (props.mode !== 0) {
+    emits('playMusic', useList.value[index - 1])
+  } else {
+    emits('stop')
   }
 }
-const play=()=>{
-  emits('playMusic',props.list[0])
+const play = () => {
+  emits('playMusic', useList.value[0])
 }
 defineExpose({
   next,
