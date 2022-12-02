@@ -2,18 +2,22 @@
   <div id="volumeMask" :style="`opacity:${visible?1:0}`">
     <div id="volume"></div>
     <div id="volumeValue" v-if="volume!==0">{{ volume }}</div>
-    <div id="volumeValue" v-else>{{ volume }}</div>
+    <div id="volumeValue" v-else>
+      <img :src="muteIcon" alt="">
+    </div>
   </div>
 </template>
 
 <script setup>
 import {ref} from "vue";
 
+import muteIcon from '../assets/mute.svg'
+
+const  props=defineProps(['volume'])
 const visible = ref(false)
-const volume = ref(100)
+
 const t=ref()
 const setVolume = (v) => {
-  volume.value = v
   visible.value=true
   clearTimeout(t.value)
   t.value=setTimeout(()=>{
@@ -57,4 +61,7 @@ defineExpose({
     display flex
     justify-content center
     align-items center
+    img
+      height 8vh
+      width 8vh
 </style>

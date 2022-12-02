@@ -63,7 +63,7 @@ defineExpose({
 
   .item
     width 90%
-    flex 1 0 60px
+    flex 0 0 60px
     box-sizing border-box
     padding-left 15px
     margin 6px 0

@@ -27,34 +27,48 @@
       <Progress :current="current" :length="length" @setProgress="setProgress"/>
       <div class="buttons">
         <div class="button" @click="setDisplayMode">
-          <img :src="iconMap[displayMode]" alt="" class="icon">
+          <img :src="displayModeIconMap[displayMode]" alt="" class="icon">
         </div>
         <div class="button" @click="last">上一首</div>
         <div class="button" @click="pause">{{ playerStatus === 'pause' ? '播放' : '暂停' }}</div>
         <div class="button" @click="next">下一首</div>
+        <div class="button" @click.stop="openVolumeSlider"><img :src="getVolumeIcon" alt="" class="icon"></div>
       </div>
-      <VolumeDisplay ref="volumeDisplay"/>
+      <VolumeDisplay ref="volumeDisplayIns" :volume="volume"/>
+      <VolumeSlider ref="volumeSliderIns" :volume="volume" @changeVolume="(volume)=>setVolume(volume/100)"/>
     </div>
   </div>
 </template>
 <script setup>
-import {nextTick, onMounted, ref, watch} from "vue";
+import {computed, nextTick, onMounted, ref, watch} from "vue";
 
 import MusicList from './components/list.vue'
 import VolumeDisplay from './components/volumeDisplay.vue'
 import Lyric from './components/lyric.vue'
 import Progress from './components/progress.vue'
+import VolumeSlider from './components/volumeSlider.vue'
 
 import loopIcon from './assets/loop.svg'
 import randomIcon from './assets/random.svg'
 import singleLoopIcon from './assets/singleLoop.svg'
 import defaultIcon from './assets/default.svg'
 import recordPic from './assets/record.svg'
+import highVolumeIcon from './assets/highVolume.svg'
+import lowVolumeIcon from './assets/lowVolume.svg'
+import muteIcon from './assets/mute.svg'
 
 import axios from 'axios'
 
-const iconMap = [defaultIcon, randomIcon, loopIcon, singleLoopIcon]
-
+const displayModeIconMap = [defaultIcon, randomIcon, loopIcon, singleLoopIcon]
+const getVolumeIcon =computed(()=>{
+  if(volume.value===0){
+    return muteIcon
+  }else if (volume.value>=50){
+    return highVolumeIcon
+  }else if(volume.value<50){
+    return lowVolumeIcon
+  }
+})
 const list = ref([])
 axios.get('/getMusicList').then(r => {
   list.value = r.data
@@ -69,12 +83,16 @@ const play = (music, immediately) => {
     if (music === playingRequest) {
       musicInfo.value = data
       playing.value = music
-      if (immediately){
+      if (immediately) {
         playerStatus.value = 'playing'
         player.value.load()
       }
     }
   })
+}
+const volumeSliderIns=ref()
+const openVolumeSlider=()=>{
+  volumeSliderIns.value.open()
 }
 const afterPlay = () => {
   albumPicAnimationName.value = albumPicAnimationName.value === 'rotating' ? 'rotating2' : 'rotating'
@@ -86,23 +104,29 @@ const next = () => {
   musicList.value.next()
 }
 const playing = ref('')
-const volumeDisplay = ref()
+const volumeDisplayIns = ref()
 const changeVolume = (e) => {
   if (playing.value) {
     if (e.deltaY > 0) {
-      player.value.volume = player.value.volume - 0.05 > 0 ? player.value.volume - 0.05 : 0
+      setVolume(player.value.volume - 0.05 > 0 ? player.value.volume - 0.05 : 0)
     } else {
-      player.value.volume = player.value.volume + 0.05 < 1 ? player.value.volume + 0.05 : 1
+      setVolume(player.value.volume + 0.05 < 1 ? player.value.volume + 0.05 : 1)
     }
   }
 }
 onMounted(() => {
-  nextTick(()=>{
-    player.value.volume = +(localStorage.getItem('volume')/100 ?? 1)
-  })
+  player.value.volume=volume.value/100
 })
+const volume = ref(+(localStorage.getItem('volume') ?? 100))
+watch(volume, () => {
+  volumeDisplayIns.value.setVolume(volume.value)
+})
+
 const volumechange = () => {
-  volumeDisplay.value.setVolume(Math.round(player.value.volume * 100))
+  volume.value = Math.round(player.value.volume * 100)
+}
+const setVolume=(volume)=>{
+  player.value.volume=Math.round(volume*100)/100
 }
 const showcase = ref('pic')
 const playerStatus = ref('pause')
@@ -128,7 +152,7 @@ const timeupdate = () => {
 }
 const loadeddata = () => {
   length.value = Math.round(player.value.duration)
-  if (playing.value&&playerStatus.value === 'playing') {
+  if (playing.value && playerStatus.value === 'playing') {
     player.value.play()
   }
 }
@@ -136,7 +160,7 @@ const musicList = ref()
 const ended = () => {
   musicList.value.next()
 }
-const setProgress=(pre)=>{
+const setProgress = (pre) => {
   // player.value.currentTime=pre*player.value.duration
 }
 const displayMode = ref(+(localStorage.getItem('displayMode') ?? 0))
