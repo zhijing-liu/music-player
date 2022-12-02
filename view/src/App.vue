@@ -3,8 +3,7 @@
          @volumechange="volumechange"
          @timeupdate="timeupdate"
          @loadeddata="loadeddata"
-         @ended="ended"
-         @play="afterPlay"></audio>
+         @ended="ended"></audio>
   <div id="main">
     <div id="leftTab">
       <MusicList :list="list"
@@ -16,8 +15,9 @@
     </div>
     <div id="container" @wheel.passive="changeVolume">
       <div class="title">{{ playing || '未播放' }}</div>
-      <div class="showcase" @click="showcase=showcase==='pic'?'lyric':'pic'">
-        <div v-if="showcase==='pic'" id="album" :class="albumPicAnimationName"
+      <div class="showcase" @click="showcase=(showcase==='pic'?'lyric':'pic')">
+        <div v-if="showcase==='pic'" id="album" class="rotating"
+             :key="playing"
              :style="`animation-play-state:${playerStatus==='pause'?'paused':'running'};`">
           <img id="albumPic" :src="musicInfo.albumPic??recordPic" alt="">
           <img id="albumBack" :src="musicInfo.albumPic??recordPic" alt="">
@@ -93,9 +93,6 @@ const play = (music, immediately) => {
 const volumeSliderIns=ref()
 const openVolumeSlider=()=>{
   volumeSliderIns.value.open()
-}
-const afterPlay = () => {
-  albumPicAnimationName.value = albumPicAnimationName.value === 'rotating' ? 'rotating2' : 'rotating'
 }
 const last = () => {
   musicList.value.last()
@@ -184,18 +181,6 @@ watch(playing, () => {
 </script>
 <style scoped lang="stylus">
 @-webkit-keyframes rotating {
-  0% {
-    transform: rotate(0deg)
-  }
-  50% {
-    transform: rotate(180deg)
-  }
-  100% {
-    transform: rotate(360deg)
-  }
-}
-
-@-webkit-keyframes rotating2 {
   0% {
     transform: rotate(0deg)
   }
@@ -300,7 +285,4 @@ watch(playing, () => {
 
       #album.rotating
         animation rotating 120s linear infinite
-
-      #album.rotating2
-        animation rotating2 120s linear infinite
 </style>
