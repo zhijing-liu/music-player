@@ -1,9 +1,12 @@
 <template>
-  <audio :src="playing?`/musicStatic/${playing}`:''" ref="player"
+  <audio v-if="controlling==='audio'"
+         :src="playing?`/musicStatic/${playing}`:''"
+         ref="player"
          @volumechange="volumechange"
          @timeupdate="timeupdate"
          @loadeddata="loadeddata"
          @ended="ended"></audio>
+  <Exciter v-else :controlling="controlling" @updateData="updateData" ref="player"/>
   <div id="main" @click="multipleChooserDisplay=false">
     <div id="leftTab">
       <MusicList :list="list"
@@ -47,6 +50,7 @@
       </div>
       <VolumeDisplay ref="volumeDisplayIns" :volume="volume"/>
       <VolumeSlider ref="volumeSliderIns" :volume="volume" @changeVolume="(v)=>setVolume(v/100)"/>
+      <Controller v-model:controlling="controlling"/>
     </div>
   </div>
 </template>
@@ -58,6 +62,8 @@ import VolumeDisplay from './components/volumeDisplay.vue'
 import Lyric from './components/lyric.vue'
 import Progress from './components/progress.vue'
 import VolumeSlider from './components/volumeSlider.vue'
+import Controller from './components/controller.vue'
+import Exciter from './components/exciter.vue'
 
 import loopIcon from './assets/loop.svg'
 import randomIcon from './assets/random.svg'
@@ -68,8 +74,11 @@ import highVolumeIcon from './assets/highVolume.svg'
 import lowVolumeIcon from './assets/lowVolume.svg'
 import muteIcon from './assets/mute.svg'
 
+import {sendPlayData} from "./socket/index.js";
+
 import axios from 'axios'
 
+const controlling = ref('audio')
 const displayModeIconMap = [defaultIcon, randomIcon, loopIcon, singleLoopIcon]
 const getVolumeIcon = computed(() => {
   if (volume.value === 0) {
@@ -143,15 +152,15 @@ const setVolume = (volume) => {
 }
 const showcase = ref('pic')
 const playerStatus = ref('pause')
-let playerFree= true
+let playerFree = true
 const stateMap = {
   continue: async () => {
-    if (playerStatus.value === 'playing'||playerFree===false) {
+    if (playerStatus.value === 'playing' || playerFree === false) {
       return
     }
     playerStatus.value = 'playing'
     if (playing.value) {
-      playerFree=false
+      playerFree = false
       await player.value.play()
       playerFree = true
     } else {
@@ -159,10 +168,10 @@ const stateMap = {
     }
   },
   pause: async () => {
-    if (playerStatus.value === 'pause'||playerFree===false) {
+    if (playerStatus.value === 'pause' || playerFree === false) {
       return
     }
-    playerFree=false
+    playerFree = false
     await player.value.pause()
     playerFree = true
     playerStatus.value = 'pause'
@@ -202,11 +211,11 @@ const ended = () => {
 }
 
 let setProgressTimer
-const setProgress = async (currentTime,immediately) => {
+const setProgress = async (currentTime, immediately) => {
   current.value = Math.round(currentTime)
-  if (immediately){
+  if (immediately) {
     player.value.currentTime = Math.round(currentTime)
-  }else{
+  } else {
     await changeState('pause')
     clearTimeout(setProgressTimer)
     setProgressTimer = setTimeout(() => {
@@ -267,6 +276,39 @@ document.addEventListener('keydown', (e) => {
   e.stopPropagation()
   e.preventDefault()
 })
+const playData = computed(() => {
+  return {
+    length: length.value,
+    current: current.value,
+    timeStep: timeStep.value,
+    musicInfo: musicInfo.value,
+    playing: playing.value,
+    playerStatus: playerStatus.value,
+  }
+})
+const sendStatusBySocket = () => {
+  if (controlling.value === 'audio') {
+    sendPlayData(playData.value);
+  }
+}
+const updateData = (data) => {
+  length.value = data.length
+  current.value = data.current
+  timeStep.value = data.timeStep
+  musicInfo.value = data.musicInfo
+  playing.value = data.playing
+  playerStatus.value = data.playerStatus
+}
+let watchDataCooling = false
+watch(playData, () => {
+  if (watchDataCooling === false && controlling.value === 'audio') {
+    watchDataCooling = true
+    sendStatusBySocket()
+    setTimeout(() => {
+      watchDataCooling = false
+    }, 500)
+  }
+}, {immediate: true})
 </script>
 <style scoped lang="stylus">
 @-webkit-keyframes rotating {

@@ -11,18 +11,19 @@
 
 <script setup>
 import {ref} from "vue";
+import {getTime} from "../../utils.js";
 
 const props=defineProps(['current','length'])
 const emits=defineEmits(['setProgress'])
-const getTime = (length) => {
-  const second = length % 60
-  const minute = Math.floor(length / 60)
-  if (minute > 0) {
-    return `${minute}m ${second}s`
-  } else {
-    return `${second}s`
-  }
-}
+// const getTime = (length) => {
+//   const second = length % 60
+//   const minute = Math.floor(length / 60)
+//   if (minute > 0) {
+//     return `${minute}m ${second}s`
+//   } else {
+//     return `${second}s`
+//   }
+// }
 const progress=ref()
 const clickProgress=(e)=>{
   emits('setProgress',props.length*(e.x-progress.value.getBoundingClientRect().x)/progress.value.getBoundingClientRect().width)
