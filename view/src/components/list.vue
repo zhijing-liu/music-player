@@ -71,16 +71,13 @@ defineExpose({
     background-color #444444
     border-radius 12px
     white-space nowrap
-    overflow-x hidden
-    overflow-y auto
+    overflow hidden
     text-overflow ellipsis
-    display flex
-    justify-content flex-start
-    align-items center
     color #EEEEEE
     font-size 18px
     font-weight bold
     cursor pointer
+    line-height 54px
 
   .item.selected
     background-color #888888
