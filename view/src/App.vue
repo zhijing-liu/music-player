@@ -4,7 +4,7 @@
          @timeupdate="timeupdate"
          @loadeddata="loadeddata"
          @ended="ended"></audio>
-  <div id="main">
+  <div id="main" @click="multipleChooserDisplay=false">
     <div id="leftTab">
       <MusicList :list="list"
                  @playMusic="(music)=>play(music,true)"
@@ -22,17 +22,28 @@
           <img id="albumPic" :src="musicInfo.albumPic??recordPic" alt="">
           <img id="albumBack" :src="musicInfo.albumPic??recordPic" alt="">
         </div>
-        <Lyric v-else-if="showcase==='lyric'" :lyricList="musicInfo.lyricList??[]" :timeStep="timeStep"/>
+        <Lyric v-else-if="showcase==='lyric'"
+               :lyricList="musicInfo.lyricList??[]"
+               :timeStep="timeStep"
+               @setProgress="setProgress"/>
       </div>
-      <Progress :current="current" :length="length" @setProgress="setProgress"/>
-      <div class="buttons">
-        <div class="button" @click="setDisplayMode">
-          <img :src="displayModeIconMap[displayMode]" alt="" class="icon">
+      <div id="controller">
+        <Progress :current="current" :length="length" @setProgress="setProgress"/>
+        <div class="buttons">
+          <div class="button" @click="setDisplayMode">
+            <img :src="displayModeIconMap[displayMode]" alt="" class="icon">
+          </div>
+          <div class="button" @click="last">上一首</div>
+          <div class="button" @click="pause">{{ playerStatus === 'pause' ? '播放' : '暂停' }}</div>
+          <div class="button" @click="next">下一首</div>
+          <div class="button" @click.stop="multipleChooserDisplay=!multipleChooserDisplay">
+            <div id="multipleChooser" :class="{display:multipleChooserDisplay}">
+              <div class="multipleItem" v-for="m in [0.25,0.5,1,1.5,2,3]" :key="m" @click="multiple=m">{{m}}x</div>
+            </div>
+            {{multiple}}x
+          </div>
+          <div class="button" @click.stop="openVolumeSlider"><img :src="getVolumeIcon" alt="" class="icon"></div>
         </div>
-        <div class="button" @click="last">上一首</div>
-        <div class="button" @click="pause">{{ playerStatus === 'pause' ? '播放' : '暂停' }}</div>
-        <div class="button" @click="next">下一首</div>
-        <div class="button" @click.stop="openVolumeSlider"><img :src="getVolumeIcon" alt="" class="icon"></div>
       </div>
       <VolumeDisplay ref="volumeDisplayIns" :volume="volume"/>
       <VolumeSlider ref="volumeSliderIns" :volume="volume" @changeVolume="(volume)=>setVolume(volume/100)"/>
@@ -100,6 +111,11 @@ const last = () => {
 const next = () => {
   musicList.value.next()
 }
+const multiple=ref(+(localStorage.getItem('multiple') ?? 1))
+watch(multiple,()=>{
+  player.value.playbackRate=multiple.value
+  localStorage.setItem('multiple',multiple.value.toString())
+})
 const playing = ref('')
 const volumeDisplayIns = ref()
 const changeVolume = (e) => {
@@ -149,6 +165,7 @@ const timeupdate = () => {
 }
 const loadeddata = () => {
   length.value = Math.round(player.value.duration)
+  player.value.playbackRate=multiple.value
   if (playing.value && playerStatus.value === 'playing') {
     player.value.play()
   }
@@ -157,15 +174,18 @@ const musicList = ref()
 const ended = () => {
   musicList.value.next()
 }
-const setProgress = (pre) => {
-  // player.value.currentTime=pre*player.value.duration
+const setProgress = (currentTime) => {
+  player.value.currentTime=currentTime
+  if (playerStatus.value === 'pause') {
+    pause()
+  }
 }
 const displayMode = ref(+(localStorage.getItem('displayMode') ?? 0))
 const setDisplayMode = () => {
   displayMode.value = displayMode.value === 3 ? 0 : displayMode.value + 1
   localStorage.setItem('displayMode', displayMode.value.toString())
 }
-const albumPicAnimationName = ref('rotating')
+
 const musicInfo = ref({})
 const stop = () => {
   length.value = 0
@@ -178,6 +198,7 @@ const stop = () => {
 watch(playing, () => {
   localStorage.setItem('playing', playing.value)
 })
+const multipleChooserDisplay=ref(false)
 </script>
 <style scoped lang="stylus">
 @-webkit-keyframes rotating {
@@ -199,6 +220,7 @@ watch(playing, () => {
   overflow hidden
   box-sizing border-box
   background-color #222222
+  user-select none
 
   #leftTab
     width 400px
@@ -223,28 +245,62 @@ watch(playing, () => {
       font-weight bold
       margin-bottom 30px
 
-
-    .buttons
-      margin 20px 0
+    #controller
+      padding 3vh 5vw
+      margin 2vh 5vw
+      border-radius 100px
+      background-color rgba(144,144,144,.3)
       display flex
-
-      .button
-        height 40px
-        padding 0 14px
-        border 3px solid #AAAAAA
-        background-color #333333
-        cursor pointer
-        color #EEEEEE
-        border-radius 12px
+      flex-direction column
+      justify-content center
+      box-shadow 0 0 25px rgba(144,144,144,.3)
+      .buttons
+        margin 20px 0
         display flex
-        align-items center
-        margin 0 10px
-        user-select none
 
-        .icon
-          width 20px
-          height 20px
-
+        .button
+          height 40px
+          padding 0 14px
+          border 3px solid #AAAAAA
+          background-color #333333
+          cursor pointer
+          color #EEEEEE
+          border-radius 12px
+          display flex
+          align-items center
+          margin 0 10px
+          user-select none
+          flex-direction column
+          justify-content center
+          position relative
+          .icon
+            width 20px
+            height 20px
+          #multipleChooser
+            position absolute
+            //width 100%
+            border 3px solid #AAAAAA
+            border-radius 12px
+            background-color #333333
+            opacity 0
+            pointer-events none
+            transition opacity 0.3s
+            width max-content
+            overflow hidden
+            .multipleItem
+              padding 0 14px
+              height 40px
+              text-align center
+              display flex
+              justify-content center
+              align-items center
+              .value
+                flex 1
+              &:hover
+                background-color #555555
+          #multipleChooser.display
+            opacity 1
+            pointer-events auto
     .showcase
       height 40vh
       width 100%

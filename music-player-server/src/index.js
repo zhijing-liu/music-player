@@ -11,7 +11,7 @@ const app = express()
 app.use(compression({filter:  (req, res) =>req.headers['accept-encoding']?.includes('gzip')&&compression.filter(req, res)}))
 app.use('/api', apiRouter)
 app.get('/musicStatic/:musicName', (req, res) => {
-    res.send(readFileSync(join(publicPath, './MyMusic', req.params.musicName)))
+    res.sendFile(join(publicPath, './MyMusic', req.params.musicName))
 })
 app.get('/musicPlayer/:path(*)', async (req, res) => {
     const staticPath = join(path, './static', req.params.path)

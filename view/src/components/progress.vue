@@ -1,5 +1,8 @@
 <template>
-  <div class="progress" @click.stop="clickProgress" ref="progress">
+  <div class="progress"
+       @click.stop="clickProgress"
+       ref="progress"
+       @mousedown="mousedown">
     <div class="info current">{{ getTime(props.current) }}</div>
     <div class="info length">{{ getTime(props.length) }}</div>
     <div class="enabled" :style="`width:${props.length?`${Math.ceil(props.current/props.length*10000)/100}%`:0}`"></div>
@@ -22,19 +25,29 @@ const getTime = (length) => {
 }
 const progress=ref()
 const clickProgress=(e)=>{
-  emits('setProgress',(e.x-progress.value.getBoundingClientRect().x)/progress.value.getBoundingClientRect().width)
+  emits('setProgress',props.length*(e.x-progress.value.getBoundingClientRect().x)/progress.value.getBoundingClientRect().width)
+}
+const mousedown = (e) => {
+  document.body.addEventListener('mousemove', clickProgress)
+  document.body.addEventListener('mouseleave', mouseup)
+  document.body.addEventListener('mouseup', mouseup)
+}
+const mouseup = (e) => {
+  document.body.removeEventListener('mousemove', clickProgress)
+  document.body.removeEventListener('mouseleave', mouseup)
+  document.body.removeEventListener('mouseup', mouseup)
 }
 </script>
 
 <style scoped lang="stylus">
 .progress
-  width 60%
+  width inherit
   height 10px
   border-radius 5px
   background-color #333333
   border 3px solid #AAAAAA
   display flex
-  margin-top 60px
+  margin-top 36px
   position relative
   cursor pointer
   .info
