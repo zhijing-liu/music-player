@@ -112,7 +112,8 @@ const refreshCloseCountDownTimer=()=>{
 defineExpose({
   open:()=>{
     visible.value=true
-  }
+  },
+  setVolume
 })
 const visibleListener=()=>{
   visible.value=false

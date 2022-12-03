@@ -25,22 +25,22 @@
         <Lyric v-else-if="showcase==='lyric'"
                :lyricList="musicInfo.lyricList??[]"
                :timeStep="timeStep"
-               @setProgress="setProgress"/>
+               @setProgress="(v)=>setProgress(v,true)"/>
       </div>
       <div id="controller">
-        <Progress :current="current" :length="length" @setProgress="setProgress"/>
+        <Progress :current="current" :length="length" @setProgress="(v)=>setProgress(v,true)"/>
         <div class="buttons">
           <div class="button" @click="setDisplayMode">
             <img :src="displayModeIconMap[displayMode]" alt="" class="icon">
           </div>
           <div class="button" @click="last">上一首</div>
-          <div class="button" @click="pause">{{ playerStatus === 'pause' ? '播放' : '暂停' }}</div>
+          <div class="button" @click="changeState">{{ playerStatus === 'pause' ? '播放' : '暂停' }}</div>
           <div class="button" @click="next">下一首</div>
           <div class="button" @click.stop="multipleChooserDisplay=!multipleChooserDisplay">
             <div id="multipleChooser" :class="{display:multipleChooserDisplay}">
-              <div class="multipleItem" v-for="m in [0.25,0.5,1,1.5,2,3]" :key="m" @click="multiple=m">{{m}}x</div>
+              <div class="multipleItem" v-for="m in [0.25,0.5,1,1.5,2,3]" :key="m" @click="multiple=m">{{ m }}x</div>
             </div>
-            {{multiple}}x
+            {{ multiple }}x
           </div>
           <div class="button" @click.stop="openVolumeSlider"><img :src="getVolumeIcon" alt="" class="icon"></div>
         </div>
@@ -71,12 +71,12 @@ import muteIcon from './assets/mute.svg'
 import axios from 'axios'
 
 const displayModeIconMap = [defaultIcon, randomIcon, loopIcon, singleLoopIcon]
-const getVolumeIcon =computed(()=>{
-  if(volume.value===0){
+const getVolumeIcon = computed(() => {
+  if (volume.value === 0) {
     return muteIcon
-  }else if (volume.value>=50){
+  } else if (volume.value >= 50) {
     return highVolumeIcon
-  }else if(volume.value<50){
+  } else if (volume.value < 50) {
     return lowVolumeIcon
   }
 })
@@ -101,8 +101,8 @@ const play = (music, immediately) => {
     }
   })
 }
-const volumeSliderIns=ref()
-const openVolumeSlider=()=>{
+const volumeSliderIns = ref()
+const openVolumeSlider = () => {
   volumeSliderIns.value.open()
 }
 const last = () => {
@@ -111,10 +111,10 @@ const last = () => {
 const next = () => {
   musicList.value.next()
 }
-const multiple=ref(+(localStorage.getItem('multiple') ?? 1))
-watch(multiple,()=>{
-  player.value.playbackRate=multiple.value
-  localStorage.setItem('multiple',multiple.value.toString())
+const multiple = ref(+(localStorage.getItem('multiple') ?? 1))
+watch(multiple, () => {
+  player.value.playbackRate = multiple.value
+  localStorage.setItem('multiple', multiple.value.toString())
 })
 const playing = ref('')
 const volumeDisplayIns = ref()
@@ -128,7 +128,7 @@ const changeVolume = (e) => {
   }
 }
 onMounted(() => {
-  player.value.volume=volume.value/100
+  player.value.volume = volume.value / 100
 })
 const volume = ref(+(localStorage.getItem('volume') ?? 100))
 watch(volume, () => {
@@ -138,23 +138,44 @@ watch(volume, () => {
 const volumechange = () => {
   volume.value = Math.round(player.value.volume * 100)
 }
-const setVolume=(volume)=>{
-  player.value.volume=Math.round(volume*100)/100
+const setVolume = (volume) => {
+  player.value.volume = Math.round(volume * 100) / 100
 }
 const showcase = ref('pic')
 const playerStatus = ref('pause')
-const pause = () => {
-  if (playerStatus.value === 'pause') {
+let playerFree= true
+const stateMap = {
+  continue: async () => {
+    if (playerStatus.value === 'playing'||playerFree===false) {
+      return
+    }
     playerStatus.value = 'playing'
     if (playing.value) {
-      player.value.play()
+      playerFree=false
+      await player.value.play()
+      playerFree = true
     } else {
       musicList.value.play()
     }
-  } else {
-    player.value.pause()
+  },
+  pause: async () => {
+    if (playerStatus.value === 'pause'||playerFree===false) {
+      return
+    }
+    playerFree=false
+    await player.value.pause()
+    playerFree = true
     playerStatus.value = 'pause'
-    localStorage.setItem('playValue',current.value.toString())
+    localStorage.setItem('playValue', current.value.toString())
+  }
+}
+const changeState = async (state) => {
+  if (stateMap[state]) {
+    await stateMap[state]?.()
+  } else if (playerStatus.value === 'pause') {
+    await stateMap.continue()
+  } else {
+    await stateMap.pause()
   }
 }
 const length = ref(0)
@@ -168,9 +189,9 @@ const timeupdate = () => {
 }
 const loadeddata = () => {
   length.value = Math.round(player.value.duration)
-  player.value.playbackRate=multiple.value
-  player.value.currentTime=current.value
-  localStorage.setItem('playValue',current.value.toString())
+  player.value.playbackRate = multiple.value
+  player.value.currentTime = current.value
+  localStorage.setItem('playValue', current.value.toString())
   if (playing.value && playerStatus.value === 'playing') {
     player.value.play()
   }
@@ -179,11 +200,21 @@ const musicList = ref()
 const ended = () => {
   musicList.value.next()
 }
-const setProgress = (currentTime) => {
-  player.value.currentTime=currentTime
-  if (playerStatus.value === 'pause') {
-    pause()
+
+let setProgressTimer
+const setProgress = async (currentTime,immediately) => {
+  current.value = Math.round(currentTime)
+  if (immediately){
+    player.value.currentTime = Math.round(currentTime)
+  }else{
+    await changeState('pause')
+    clearTimeout(setProgressTimer)
+    setProgressTimer = setTimeout(() => {
+      player.value.currentTime = current.value
+      changeState('continue')
+    }, 600)
   }
+
 }
 const displayMode = ref(+(localStorage.getItem('displayMode') ?? 0))
 const setDisplayMode = () => {
@@ -203,10 +234,39 @@ const stop = () => {
 watch(playing, () => {
   localStorage.setItem('playing', playing.value)
 })
-const multipleChooserDisplay=ref(false)
-setInterval(()=>{
-  localStorage.setItem('playValue',current.value.toString())
-},1000)
+const multipleChooserDisplay = ref(false)
+setInterval(() => {
+  localStorage.setItem('playValue', current.value.toString())
+}, 1000)
+const keyupMap = {
+  Space: changeState,
+  PageDown: next,
+  PageUp: last
+}
+const keydownMap = {
+  ArrowLeft: () => {
+    setProgress(current.value > 1 ? current.value - 1 : 0)
+  },
+  ArrowRight: () => {
+    setProgress(current.value + 1)
+  },
+  ArrowUp: () => {
+    volumeSliderIns.value.setVolume(volume.value + 5)
+  },
+  ArrowDown: () => {
+    volumeSliderIns.value.setVolume(volume.value - 5)
+  },
+}
+document.addEventListener('keyup', (e) => {
+  keyupMap[e.code]?.()
+  e.stopPropagation()
+  e.preventDefault()
+})
+document.addEventListener('keydown', (e) => {
+  keydownMap[e.code]?.()
+  e.stopPropagation()
+  e.preventDefault()
+})
 </script>
 <style scoped lang="stylus">
 @-webkit-keyframes rotating {
@@ -257,11 +317,12 @@ setInterval(()=>{
       padding 3vh 5vw
       margin 2vh 5vw
       border-radius 100px
-      background-color rgba(144,144,144,.3)
+      background-color rgba(144, 144, 144, .3)
       display flex
       flex-direction column
       justify-content center
-      box-shadow 0 0 25px rgba(144,144,144,.3)
+      box-shadow 0 0 25px rgba(144, 144, 144, .3)
+
       .buttons
         margin 20px 0
         display flex
@@ -281,9 +342,11 @@ setInterval(()=>{
           flex-direction column
           justify-content center
           position relative
+
           .icon
             width 20px
             height 20px
+
           #multipleChooser
             position absolute
             //width 100%
@@ -295,6 +358,7 @@ setInterval(()=>{
             transition opacity 0.3s
             width max-content
             overflow hidden
+
             .multipleItem
               padding 0 14px
               height 40px
@@ -302,13 +366,17 @@ setInterval(()=>{
               display flex
               justify-content center
               align-items center
+
               .value
                 flex 1
+
               &:hover
                 background-color #555555
+
           #multipleChooser.display
             opacity 1
             pointer-events auto
+
     .showcase
       height 40vh
       width 100%
