@@ -154,18 +154,23 @@ const pause = () => {
   } else {
     player.value.pause()
     playerStatus.value = 'pause'
+    localStorage.setItem('playValue',current.value.toString())
   }
 }
 const length = ref(0)
-const current = ref(0)
+const current = ref(+(localStorage.getItem('playValue') ?? 0))
 const timeStep = ref(0)
 const timeupdate = () => {
-  current.value = Math.round(player.value.currentTime)
-  timeStep.value = Math.round(player.value.currentTime * 1000)
+  if (playing.value && playerStatus.value === 'playing') {
+    current.value = Math.round(player.value.currentTime)
+    timeStep.value = Math.round(player.value.currentTime * 1000)
+  }
 }
 const loadeddata = () => {
   length.value = Math.round(player.value.duration)
   player.value.playbackRate=multiple.value
+  player.value.currentTime=current.value
+  localStorage.setItem('playValue',current.value.toString())
   if (playing.value && playerStatus.value === 'playing') {
     player.value.play()
   }
@@ -199,6 +204,9 @@ watch(playing, () => {
   localStorage.setItem('playing', playing.value)
 })
 const multipleChooserDisplay=ref(false)
+setInterval(()=>{
+  localStorage.setItem('playValue',current.value.toString())
+},1000)
 </script>
 <style scoped lang="stylus">
 @-webkit-keyframes rotating {
