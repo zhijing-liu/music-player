@@ -1,5 +1,6 @@
 <template>
   <div id="lyricList" @wheel.stop.passive="wheel" ref="lyricListIns">
+    <div class="lyricBlock"></div>
     <div
         class="lyric"
         v-for="(lyric,index) in props.lyricList"
@@ -9,6 +10,7 @@
     >
       <span class="lyricValue" @click.stop="()=>clickLyric(lyric)">{{ lyric.lyric }}</span>
     </div>
+    <div class="lyricBlock"></div>
   </div>
   <div class="lyricListMask"></div>
 </template>
@@ -91,7 +93,8 @@ const wheel=()=>{
       padding 5px 11px
   .lyric.light
     color #FFFFFF
-
+  .lyricBlock
+    flex 0 0 20vh
   &::-webkit-scrollbar
     width 0
 .lyricListMask
