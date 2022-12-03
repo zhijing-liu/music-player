@@ -46,12 +46,12 @@
         </div>
       </div>
       <VolumeDisplay ref="volumeDisplayIns" :volume="volume"/>
-      <VolumeSlider ref="volumeSliderIns" :volume="volume" @changeVolume="(volume)=>setVolume(volume/100)"/>
+      <VolumeSlider ref="volumeSliderIns" :volume="volume" @changeVolume="(v)=>setVolume(v/100)"/>
     </div>
   </div>
 </template>
 <script setup>
-import {computed, nextTick, onMounted, ref, watch} from "vue";
+import {computed, onMounted, ref, watch} from "vue";
 
 import MusicList from './components/list.vue'
 import VolumeDisplay from './components/volumeDisplay.vue'
