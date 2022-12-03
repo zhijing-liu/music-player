@@ -2,7 +2,7 @@
   <div id="musicList" @scroll="scroll" ref="musicList">
     <div class="item" v-for="music in props.list" @click="()=>emits('playMusic',music)"
          :key="music"
-         :class="{selected:props.playing===music}">{{ music }}
+         :class="{selected:props.playing===music}">{{ music.replace(/([.]flac)|([.]mp3)|([.]wav)|([.]m4a)$/,'') }}
     </div>
   </div>
 </template>
@@ -45,6 +45,7 @@ const last = () => {
 const play = () => {
   emits('playMusic', useList.value[0])
 }
+
 defineExpose({
   next,
   last,
