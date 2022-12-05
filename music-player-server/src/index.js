@@ -25,6 +25,9 @@ app.get('/musicPlayer/:path(*)', async (req, res) => {
 app.get('/musicPlayer', (req, res) => {
     res.sendFile(join(path, './static', 'index.html'))
 })
+app.get('/',(req,res)=>{
+    res.redirect('/musicPlayer')
+})
 
 app.listen(port, host, () => {
     readFile(join(publicPath, './logo.txt'), {encoding: 'utf-8'}, (err, data) => {
