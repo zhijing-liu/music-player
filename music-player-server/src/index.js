@@ -1,5 +1,5 @@
 import express from 'express'
-import {readFileSync, accessSync, readFile} from 'node:fs'
+import {readFile,statSync} from 'node:fs'
 import {join} from 'node:path'
 import {fileURLToPath} from 'node:url'
 import {apiRouter} from "./router.js";
@@ -13,17 +13,18 @@ app.use('/api', apiRouter)
 app.get('/musicStatic/:musicName', (req, res) => {
     res.sendFile(join(publicPath, './MyMusic', req.params.musicName))
 })
-app.get('/musicPlayer/:path(*)', async (req, res) => {
-    const staticPath = join(path, './static', req.params.path)
+app.get('/musicPlayer/?:path(*)', async (req, res) => {
     try {
-        accessSync(staticPath)
-        res.sendFile(staticPath)
+        const staticPath=join(path, './static', req.params.path)
+        const stat=statSync(staticPath)
+        if (stat.isFile()){
+            res.sendFile(staticPath)
+        }else{
+            res.sendFile(join(path, './static', 'index.html'))
+        }
     } catch (e) {
         res.sendFile(join(path, './static', 'index.html'))
     }
-})
-app.get('/musicPlayer', (req, res) => {
-    res.sendFile(join(path, './static', 'index.html'))
 })
 app.get('/',(req,res)=>{
     res.redirect('/musicPlayer')
