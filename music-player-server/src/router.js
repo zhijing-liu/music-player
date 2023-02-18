@@ -1,16 +1,19 @@
 import {Router} from "express";
 import {readdirSync} from "node:fs";
-import {join} from "node:path";
+import {join,normalize} from "node:path";
 import {fileURLToPath} from "node:url";
 import {parseFile} from 'music-metadata'
+import {musicPath} from "./config.js";
 
-const publicPath = join(fileURLToPath(import.meta.url), '../../public')
+const path = join(fileURLToPath(import.meta.url), '../../')
+const publicPath=join(path,'/public')
+const MP=normalize(musicPath?.replaceAll('{{path}}',path)??join(path,'/public'))
 export const apiRouter = Router()
     .get('/getMusicList', (req, res) => {
-        res.send(readdirSync(join(publicPath, './MyMusic')))
+        res.send(readdirSync(join(MP, './MyMusic')))
     })
     .get('/musicInfo/:musicName', async (req, res) => {
-        const fileInfo = await parseFile(join(publicPath, './MyMusic', req.params.musicName))
+        const fileInfo = await parseFile(join(MP, './MyMusic', req.params.musicName))
         const lyricList = []
         if (fileInfo.common.lyrics) {
             for (const lyrics of fileInfo.common.lyrics) {
